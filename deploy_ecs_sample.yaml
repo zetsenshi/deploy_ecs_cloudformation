@@ -1,0 +1,100 @@
+Parameters:
+  Tag:
+    Type: String
+    Default: latest
+Resources:
+  web:
+    Type: AWS::ECS::Service
+    Properties:
+      Role: ecsServiceRole
+      TaskDefinition:
+        Ref: taskdefinition
+      DesiredCount: 3
+      DeploymentConfiguration:
+       MaximumPercent: 100
+       MinimumHealthyPercent: 50
+      LoadBalancers:
+      - TargetGroupArn: arn:aws:elasticloadbalancing:ap-northeast-1:*****:targetgroup/*****/*****
+        ContainerPort: 80
+        ContainerName: nginx
+      Cluster: hoge
+  taskdefinition: 
+    Type: "AWS::ECS::TaskDefinition"
+    Properties: 
+      Volumes: []
+      Family:  hoge-family
+      NetworkMode: bridge
+      ContainerDefinitions:
+       -
+        VolumesFrom: []
+        Memory: 6144
+        Essential: true
+        MountPoints: []
+        Name: ruby
+        Environment: []
+        Links:
+          - fluentd
+        Image: !Sub *****.dkr.ecr.ap-northeast-1.amazonaws.com/******:${Tag}
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: hoge
+            awslogs-region: ap-northeast-1
+            awslogs-stream-prefix: rails
+        Cpu: 0
+       -
+        VolumesFrom:
+          - ReadOnly: false
+            SourceContainer: ruby
+        Memory: 1024
+        PortMappings:
+          - HostPort: 0
+            ContainerPort: 80
+            Protocol: tcp
+        Essential: true
+        MountPoints: []
+        Name: nginx
+        Ulimits:
+          - SoftLimit: 65535
+            HardLimit: 65535
+            Name: nofile
+          - SoftLimit: 65535
+            HardLimit: 65535
+            Name: nproc
+        Environment: []
+        Links:
+          - ruby
+        Image: *****.dkr.ecr.ap-northeast-1.amazonaws.com/nginx:latest 
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: hoge-nginx
+            awslogs-region: ap-northeast-1
+            awslogs-stream-prefix: nginx
+        Cpu: 0
+       -
+        VolumesFrom: []
+        Memory: 256
+        PortMappings:
+          - HostPort: 0
+            ContainerPort: 24220
+            Protocol: tcp            
+        Essential: true
+        MountPoints: []
+        Name: fluentd
+        Ulimits:
+          - SoftLimit: 65535
+            HardLimit: 65535
+            Name: nofile
+          - SoftLimit: 65535
+            HardLimit: 65535
+            Name: nproc
+        Environment: []
+        Image: *****.dkr.ecr.ap-northeast-1.amazonaws.com/fluentd:latest 
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: fluentd
+            awslogs-region: ap-northeast-1
+            awslogs-stream-prefix: fluentd
+        Cpu: 0
